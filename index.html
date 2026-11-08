@@ -3250,6 +3250,7 @@ svg.ps-image{display:block;max-width:100%}
       });
       background = [];
     }
+    var closeTicket = 0;
     function sealMenu() {
       panel.hidden = true;
       panel.classList.remove('is-open');
@@ -3261,6 +3262,14 @@ svg.ps-image{display:block;max-width:100%}
     }
     function menuMotion() {
       return typeof window.getComputedStyle === 'function' && !(reduced && reduced.matches);
+    }
+    function releaseClosing() {
+      closeTicket += 1;
+      panel.classList.remove('is-closing');
+      panel.style.pointerEvents = '';
+      if (scrim) scrim.style.pointerEvents = '';
+      panel.removeAttribute('aria-hidden');
+      if ('inert' in panel) panel.inert = false;
     }
     function closeMenu() {
       if (!opened) return;
@@ -3277,6 +3286,7 @@ svg.ps-image{display:block;max-width:100%}
       var target = previousFocus && previousFocus.isConnected ? previousFocus : button;
       target.focus({ preventScroll: true });
       if (!menuMotion()) { sealMenu(); return; }
+      var ticket = ++closeTicket;
       panel.setAttribute('aria-hidden', 'true');
       if ('inert' in panel) panel.inert = true;
       panel.style.pointerEvents = 'none';
@@ -3284,9 +3294,9 @@ svg.ps-image{display:block;max-width:100%}
       panel.classList.add('is-closing');
       var done = false;
       function end() {
-        if (done) return;
-        done = true;
         panel.removeEventListener('transitionend', end);
+        if (done || ticket !== closeTicket) return;
+        done = true;
         sealMenu();
       }
       panel.addEventListener('transitionend', end);
@@ -3295,6 +3305,7 @@ svg.ps-image{display:block;max-width:100%}
     disposeMenu = closeMenu;
     function openMenu() {
       if (opened) return;
+      releaseClosing();
       revealFloatingHeader();
       previousFocus = button;
       opened = true;
