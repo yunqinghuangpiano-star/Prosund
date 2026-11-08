@@ -175,6 +175,7 @@ header#nav > .brand > .plate :is(img,svg):where(img,.ps-image),.footer-logo{filt
  .menu-ready #cat.panel{transition:opacity .16s ease}
  .menu-ready #cat.panel:not(.is-open),.menu-ready #cat.panel.is-closing{opacity:0}
 }
+html.ps-from-pointer #catbtn:focus,html.ps-from-pointer #catbtn:focus-visible,html.ps-from-pointer .menu-ready .panel-close:focus,html.ps-from-pointer .menu-ready .panel-close:focus-visible,html.ps-from-pointer .menu-ready #cat a:focus,html.ps-from-pointer .menu-ready #cat a:focus-visible,html.ps-from-pointer .menu-ready #cat summary:focus,html.ps-from-pointer .menu-ready #cat summary:focus-visible{outline:none}
 
 /* Shared content-page rhythm, using the approved homepage tokens. */
 .content-page h2 { font-size:var(--fs-h); line-height:1.3; margin:12px 0 28px; }
@@ -3165,10 +3166,12 @@ svg.ps-image{display:block;max-width:100%}
   }
   listen(document, 'pointerdown', function () {
     keyboardMode = false;
+    root.classList.add('ps-from-pointer');
     if (header) header.classList.remove('keyboard-focus');
     if (menuExpanded()) revealFloatingHeader();
   });
   listen(document, 'keydown', function (event) {
+    if (event.key === 'Tab') root.classList.remove('ps-from-pointer');
     if (!/^(Tab|Escape|Enter| |ArrowUp|ArrowDown|ArrowLeft|ArrowRight|PageUp|PageDown|Home|End)$/.test(event.key)) return;
     keyboardMode = true;
     if (event.key === 'Tab' || menuExpanded() || (header && header.contains(document.activeElement))) {
@@ -3501,6 +3504,17 @@ svg.ps-image{display:block;max-width:100%}
     if (event.key === 'Tab' || event.key === 'Enter' || event.key === ' ') keyboardIntent = true;
   }, true);
   function focusTarget(anchor) {
+    // A pointer or the first paint must not focus the heading under the hero.
+    // Browsers that scroll a focused element would leave that visit mid-page.
+    // Keyboard activation still moves to the heading. An explicit anchor still moves to that anchor.
+    if (!anchor && !keyboardIntent) {
+      var top = document.querySelector('main');
+      if (!top) return null;
+      if (!top.hasAttribute('tabindex')) top.setAttribute('tabindex', '-1');
+      top.classList.add('ps-pointer-target');
+      top.focus({ preventScroll: true });
+      return null;
+    }
     var target = anchor ? document.getElementById(anchor) : (document.querySelector('main h1') || document.querySelector('main'));
     if (!target) target = (document.querySelector('main h1') || document.querySelector('main'));
     if (!target) return null;
@@ -3509,7 +3523,6 @@ svg.ps-image{display:block;max-width:100%}
     var interactive = /^(A|BUTTON|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(focus.tagName);
     if (!interactive) focus.setAttribute('tabindex', '-1');
     focus.classList.remove('ps-pointer-target');
-    // Keep the heading focused for reading position, but do not paint a box unless a key activated the move.
     if (!interactive && !keyboardIntent) focus.classList.add('ps-pointer-target');
     keyboardIntent = false;
     focus.focus({ preventScroll: true });
